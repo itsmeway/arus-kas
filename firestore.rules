@@ -1,0 +1,142 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Pillar 1: Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Validation Helper: Wallet
+    function isValidWallet(data, userId) {
+      return data.userId is string && data.userId == userId && data.userId.size() <= 128 &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 60 &&
+             data.walletType is string && data.walletType in ['BANK', 'EWALLET', 'CASH'] &&
+             data.balance is int && data.balance >= -1000000000000 && data.balance <= 1000000000000 &&
+             data.colorHex is string && data.colorHex.size() >= 4 && data.colorHex.size() <= 12 &&
+             data.iconKey is string && data.iconKey.size() >= 1 && data.iconKey.size() <= 40 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    // Validation Helper: TransactionRecord
+    function isValidTransaction(data, userId) {
+      return data.userId is string && data.userId == userId && data.userId.size() <= 128 &&
+             data.type is string && data.type in ['EXPENSE', 'INCOME', 'SAVINGS_ALLOCATION'] &&
+             data.amount is int && data.amount > 0 && data.amount <= 1000000000000 &&
+             data.categoryKey is string && data.categoryKey.size() >= 1 && data.categoryKey.size() <= 50 &&
+             data.categoryLabel is string && data.categoryLabel.size() >= 1 && data.categoryLabel.size() <= 60 &&
+             data.frequencyTag is string && data.frequencyTag in ['HARIAN', 'MINGGUAN', 'BULANAN', 'MENDADAK', 'PEMASUKAN', 'TABUNGAN'] &&
+             data.walletId is string && data.walletId.size() >= 1 && data.walletId.size() <= 128 &&
+             data.walletName is string && data.walletName.size() >= 1 && data.walletName.size() <= 60 &&
+             data.note is string && data.note.size() <= 300 &&
+             data.transactionDateMillis is int && data.transactionDateMillis > 0 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    // Validation Helper: SavingsGoal
+    function isValidSavingsGoal(data, userId) {
+      return data.userId is string && data.userId == userId && data.userId.size() <= 128 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 80 &&
+             data.targetAmount is int && data.targetAmount > 0 && data.targetAmount <= 1000000000000 &&
+             data.savedAmount is int && data.savedAmount >= 0 && data.savedAmount <= 1000000000000 &&
+             data.dailyRecommendation is int && data.dailyRecommendation >= 0 && data.dailyRecommendation <= 1000000000000 &&
+             data.note is string && data.note.size() <= 300 &&
+             data.iconKey is string && data.iconKey.size() >= 1 && data.iconKey.size() <= 40 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    // Collection 1: Wallets
+    match /users/{userId}/wallets/{walletId} {
+      allow get: if isOwner(userId) && isValidId(userId) && isValidId(walletId);
+      allow list: if isOwner(userId) && isValidId(userId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidId(walletId) &&
+                       incoming().keys().hasAll(['userId', 'name', 'walletType', 'balance', 'colorHex', 'iconKey', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'name', 'walletType', 'balance', 'colorHex', 'iconKey', 'createdAt', 'updatedAt']) &&
+                       isValidWallet(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidId(walletId) &&
+                       isValidWallet(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['name', 'walletType', 'balance', 'colorHex', 'iconKey', 'updatedAt']);
+
+      allow delete: if isOwner(userId) && isValidId(userId) && isValidId(walletId);
+    }
+
+    // Collection 2: Transactions
+    match /users/{userId}/transactions/{transactionId} {
+      allow get: if isOwner(userId) && isValidId(userId) && isValidId(transactionId);
+      allow list: if isOwner(userId) && isValidId(userId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidId(transactionId) &&
+                       incoming().keys().hasAll(['userId', 'type', 'amount', 'categoryKey', 'categoryLabel', 'frequencyTag', 'walletId', 'walletName', 'note', 'transactionDateMillis', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'type', 'amount', 'categoryKey', 'categoryLabel', 'frequencyTag', 'walletId', 'walletName', 'note', 'transactionDateMillis', 'createdAt', 'updatedAt']) &&
+                       isValidTransaction(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidId(transactionId) &&
+                       isValidTransaction(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['amount', 'categoryKey', 'categoryLabel', 'frequencyTag', 'walletId', 'walletName', 'note', 'transactionDateMillis', 'updatedAt']);
+
+      allow delete: if isOwner(userId) && isValidId(userId) && isValidId(transactionId);
+    }
+
+    // Collection 3: Savings Goals
+    match /users/{userId}/goals/{goalId} {
+      allow get: if isOwner(userId) && isValidId(userId) && isValidId(goalId);
+      allow list: if isOwner(userId) && isValidId(userId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidId(goalId) &&
+                       incoming().keys().hasAll(['userId', 'title', 'targetAmount', 'savedAmount', 'dailyRecommendation', 'note', 'iconKey', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'title', 'targetAmount', 'savedAmount', 'dailyRecommendation', 'note', 'iconKey', 'createdAt', 'updatedAt']) &&
+                       isValidSavingsGoal(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidId(goalId) &&
+                       isValidSavingsGoal(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['title', 'targetAmount', 'savedAmount', 'dailyRecommendation', 'note', 'iconKey', 'updatedAt']);
+
+      allow delete: if isOwner(userId) && isValidId(userId) && isValidId(goalId);
+    }
+  }
+}

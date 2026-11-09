@@ -1,0 +1,6 @@
+{
+  "name": "ArusKas",
+  "description": "Aplikasi pemantau arus kas pribadi, multi-dompet (BCA, Bank Mas, DANA, ShopeePay, GoPay), pengeluaran cepat 3x3, target tabungan impian, dan mentor finansial pintar.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,196 @@
+{
+  "entities": {
+    "Wallet": {
+      "title": "Wallet",
+      "description": "Represents a user's money storage source such as a bank account or e-wallet (e.g. BCA, Bank Mas, DANA, ShopeePay, GoPay).",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The UID of the authenticated user who owns this wallet."
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of the wallet (e.g. Bank BCA, Bank Mas, DANA)."
+        },
+        "walletType": {
+          "type": "string",
+          "enum": ["BANK", "EWALLET", "CASH"],
+          "description": "Category of wallet storage."
+        },
+        "balance": {
+          "type": "integer",
+          "description": "Current balance in Indonesian Rupiah (IDR)."
+        },
+        "colorHex": {
+          "type": "string",
+          "description": "Hex color code representing the wallet brand."
+        },
+        "iconKey": {
+          "type": "string",
+          "description": "Identifier for the wallet icon."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when created (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when last updated (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": ["userId", "name", "walletType", "balance", "colorHex", "iconKey", "createdAt", "updatedAt"]
+    },
+    "TransactionRecord": {
+      "title": "TransactionRecord",
+      "description": "Records every cash flow movement (expense, income, or savings allocation) tied to a specific wallet.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The UID of the authenticated user."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["EXPENSE", "INCOME", "SAVINGS_ALLOCATION"],
+          "description": "Direction of money flow."
+        },
+        "amount": {
+          "type": "integer",
+          "description": "Transaction amount in Rupiah (IDR), strictly positive."
+        },
+        "categoryKey": {
+          "type": "string",
+          "description": "Identifier key for the category."
+        },
+        "categoryLabel": {
+          "type": "string",
+          "description": "Human-readable category name."
+        },
+        "frequencyTag": {
+          "type": "string",
+          "enum": ["HARIAN", "MINGGUAN", "BULANAN", "MENDADAK", "PEMASUKAN", "TABUNGAN"],
+          "description": "Classification of routine vs unplanned flow."
+        },
+        "walletId": {
+          "type": "string",
+          "description": "ID of the wallet deducted or credited."
+        },
+        "walletName": {
+          "type": "string",
+          "description": "Snapshot name of the wallet."
+        },
+        "note": {
+          "type": "string",
+          "description": "Clear user note explaining what the money was for."
+        },
+        "transactionDateMillis": {
+          "type": "integer",
+          "description": "Epoch milliseconds when the transaction occurred."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when created (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when updated (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "userId",
+        "type",
+        "amount",
+        "categoryKey",
+        "categoryLabel",
+        "frequencyTag",
+        "walletId",
+        "walletName",
+        "note",
+        "transactionDateMillis",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SavingsGoal": {
+      "title": "SavingsGoal",
+      "description": "Tracks a dream or savings target such as buying a laptop, with progress calculations and notes.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The UID of the authenticated user."
+        },
+        "title": {
+          "type": "string",
+          "description": "Name of the dream/target (e.g. Beli Laptop Kerja)."
+        },
+        "targetAmount": {
+          "type": "integer",
+          "description": "Total target amount in IDR."
+        },
+        "savedAmount": {
+          "type": "integer",
+          "description": "Current accumulated amount in IDR."
+        },
+        "dailyRecommendation": {
+          "type": "integer",
+          "description": "Recommended daily savings amount in IDR."
+        },
+        "note": {
+          "type": "string",
+          "description": "Detailed calculation notes or motivation for this dream."
+        },
+        "iconKey": {
+          "type": "string",
+          "description": "Icon identifier for the dream goal."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when created (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when updated (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "userId",
+        "title",
+        "targetAmount",
+        "savedAmount",
+        "dailyRecommendation",
+        "note",
+        "iconKey",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/wallets/{walletId}": {
+      "schema": {
+        "$ref": "#/entities/Wallet"
+      },
+      "description": "Stores user wallets (BCA, Bank Mas, DANA, ShopeePay, GoPay, etc.)."
+    },
+    "/users/{userId}/transactions/{transactionId}": {
+      "schema": {
+        "$ref": "#/entities/TransactionRecord"
+      },
+      "description": "Stores user expenses, incomes, and savings allocations."
+    },
+    "/users/{userId}/goals/{goalId}": {
+      "schema": {
+        "$ref": "#/entities/SavingsGoal"
+      },
+      "description": "Stores user savings goals and dreams."
+    }
+  }
+}
